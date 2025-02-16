@@ -2,10 +2,21 @@
 import { onMounted, ref } from 'vue'
 
 const count = ref(0)
+const queryCacheData = ref([])
 
-onMounted(async () => {
+const channel = new BroadcastChannel('my_channel')
+
+onMounted(() => {
   const id = 'pinia-colada-devtools'
   window.top?.postMessage({ id, type: 'FROM_DEVTOOLS', payload: 'Hello from devtools' })
+
+    channel.onmessage = (event) => {
+      if (event.data.type === 'queryCache') {
+        console.log('Received query cache data:', event.data.data)
+        queryCacheData.value = event.data.data
+        console.log('window.location.pathname in devtools panel', window.location.pathname)
+      }
+    }
 })
 </script>
 

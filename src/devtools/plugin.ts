@@ -1,12 +1,27 @@
 import { addCustomTab, setupDevtoolsPlugin } from '@vue/devtools-api'
-import { watch, type App } from 'vue'
-// import DevtoolsPanel from './DevtoolsPane.vue?raw'
+import { watch, type App, ref, h, devtools } from 'vue'
+import DevtoolsPanel from './DevtoolsPane.vue?raw'
 import type { Pinia } from 'pinia'
 import { useQueryCache } from '../query-store'
 import type { DataStateStatus } from '../data-state'
 
 const QUERY_INSPECTOR_ID = 'pinia-colada-queries'
 const ID_SEPARATOR = '\0'
+
+const channel = new BroadcastChannel('my_channel')
+
+const sendQueryCache = (queryCache) => {
+  const queryCacheData = queryCache.getEntries().map((entry) => ({
+    key: entry.key,
+    state: entry.state.value,
+    asyncStatus: entry.asyncStatus.value,
+    active: entry.active,
+  }))
+
+  channel.postMessage({ type: 'queryCache', data: queryCacheData })
+  console.log('sent query cache data:', queryCacheData)
+  console.log('window.location.pathnam in plugin panel', window.location.pathname)
+}
 
 function debounce(fn: () => void, delay: number) {
   let timeout: ReturnType<typeof setTimeout>
@@ -199,6 +214,7 @@ export function addDevtools(app: App, pinia: Pinia) {
           || name === 'track'
           || name === 'ensure' // includes create
         ) {
+          sendQueryCache(queryCache)
           updateQueryInspectorTree()
           after(updateQueryInspectorTree)
           onError(updateQueryInspectorTree)
@@ -214,26 +230,16 @@ export function addDevtools(app: App, pinia: Pinia) {
 
   // TODO: custom tab?
 
-  // addCustomTab({
-  //   name: 'pinia-colada',
-  //   title: 'Pinia Colada',
-  //   icon: 'https://pinia-colada.esm.dev/logo.svg',
-  //   view: {
-  //     type: 'sfc',
-  //     sfc: DevtoolsPanel,
-  //     // type: 'vnode',
-  //     // vnode: h('p', ['hello world']),
-  //     // vnode: createVNode(DevtoolsPanel),
-  //   },
-  //   category: 'modules',
-  // })
-
-  // window.addEventListener('message', (event) => {
-  //   const data = event.data
-  //   if (data != null && typeof data === 'object' && data.id === 'pinia-colada-devtools') {
-  //     console.log('message', event)
-  //   }
-  // })
+  addCustomTab({
+    name: 'pinia-colada',
+    title: 'Pinia Colada',
+    icon: 'https://pinia-colada.esm.dev/logo.svg',
+    view: {
+      type: 'sfc',
+      sfc: DevtoolsPanel,
+    },
+    category: 'modules',
+  })
 }
 
 interface InspectorNodeTag {
